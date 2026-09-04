@@ -173,7 +173,7 @@ expense/
 
 ### Step 1: Clone or Open Project Directory
 ```bash
-cd d:/Twillo/expense
+D:/expense
 ```
 
 ### Step 2: Install Dependencies
