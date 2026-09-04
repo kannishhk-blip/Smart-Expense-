@@ -20,21 +20,40 @@ export async function apiRequest<T = any>(
     ...(data ? { body: JSON.stringify(data) } : {}),
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
-  if (response.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register') && window.location.pathname !== '/') {
-      window.location.href = '/login';
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (
+        !window.location.pathname.includes('/login') &&
+        !window.location.pathname.includes('/register') &&
+        window.location.pathname !== '/'
+      ) {
+        window.location.href = '/login';
+      }
     }
+
+    const text = await response.text();
+    let result: any = {};
+    if (text && text.trim()) {
+      try {
+        result = JSON.parse(text);
+      } catch (parseErr) {
+        result = { message: 'Server returned a non-JSON response. Please ensure backend server is running on port 5000.' };
+      }
+    }
+
+    if (!response.ok || result.success === false) {
+      throw new Error(result.message || `Server request failed with status ${response.status}.`);
+    }
+
+    return result;
+  } catch (error: any) {
+    if (error.message && error.message.includes('JSON')) {
+      throw new Error('Backend server did not respond. Please ensure backend server is running (`npm run dev` in server directory).');
+    }
+    throw error;
   }
-
-  const result = await response.json();
-
-  if (!response.ok || result.success === false) {
-    throw new Error(result.message || 'An unexpected error occurred. Please try again.');
-  }
-
-  return result;
 }
