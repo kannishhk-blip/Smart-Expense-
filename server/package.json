@@ -4,6 +4,7 @@
   "description": "Backend API for Smart Expense & Budget Tracker",
   "main": "dist/app.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "build": "tsc",
     "start": "node dist/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
@@ -17,7 +18,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.3",
-    "isomorphic-git": "^1.41.9",
+    "isomorphic-git": "^1.29.0",
     "jsonwebtoken": "^9.0.2",
     "zod": "^3.22.4"
   },

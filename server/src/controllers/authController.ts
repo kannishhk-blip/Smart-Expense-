@@ -66,7 +66,11 @@ export const register = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: "We couldn't complete registration. Please try again." });
+    console.error('SERVER REGISTRATION ERROR:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "We couldn't complete registration. Please ensure database is initialized (`npx prisma db push`).",
+    });
   }
 };
 
@@ -107,8 +111,12 @@ export const login = async (req: Request, res: Response) => {
         settings: user.settings,
       },
     });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "We couldn't log you in. Please try again." });
+  } catch (error: any) {
+    console.error('SERVER LOGIN ERROR:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "We couldn't log you in. Please ensure database is initialized (`npx prisma db push`).",
+    });
   }
 };
 
