@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../config/db';
+import { prisma, ensureDbSchema } from '../config/db';
 import { ENV } from '../config/env';
 import { AuthRequest } from '../middleware/authMiddleware';
 
@@ -25,7 +25,18 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Passwords do not match.' });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    let existingUser;
+    try {
+      existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    } catch (dbErr: any) {
+      if (dbErr.message && dbErr.message.includes('does not exist')) {
+        ensureDbSchema();
+        existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+      } else {
+        throw dbErr;
+      }
+    }
+
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
     }
@@ -69,7 +80,7 @@ export const register = async (req: Request, res: Response) => {
     console.error('SERVER REGISTRATION ERROR:', error);
     res.status(500).json({
       success: false,
-      message: error.message || "We couldn't complete registration. Please ensure database is initialized (`npx prisma db push`).",
+      message: error.message || "We couldn't complete registration. Please try again.",
     });
   }
 };
@@ -82,10 +93,23 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Please enter both email and password.' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-      include: { settings: true },
-    });
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+        include: { settings: true },
+      });
+    } catch (dbErr: any) {
+      if (dbErr.message && dbErr.message.includes('does not exist')) {
+        ensureDbSchema();
+        user = await prisma.user.findUnique({
+          where: { email: email.toLowerCase() },
+          include: { settings: true },
+        });
+      } else {
+        throw dbErr;
+      }
+    }
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
@@ -115,7 +139,7 @@ export const login = async (req: Request, res: Response) => {
     console.error('SERVER LOGIN ERROR:', error);
     res.status(500).json({
       success: false,
-      message: error.message || "We couldn't log you in. Please ensure database is initialized (`npx prisma db push`).",
+      message: error.message || "We couldn't log you in. Please try again.",
     });
   }
 };
