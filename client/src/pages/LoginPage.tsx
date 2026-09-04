@@ -19,14 +19,17 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     setError(null);
 
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
       setError('Please enter both email and password.');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await login({ email, password });
+      await login({ email: cleanEmail, password: cleanPassword });
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (err: any) {
@@ -36,11 +39,20 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const fillDemoAccount = () => {
+  const fillDemoAccount = async () => {
     setEmail('demo@example.com');
     setPassword('Demo@12345');
     setError(null);
-    toast.success('Demo credentials loaded!');
+    try {
+      setIsSubmitting(true);
+      await login({ email: 'demo@example.com', password: 'Demo@12345' });
+      toast.success('Welcome to Demo Account!');
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Failed to login to demo account.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -59,14 +71,15 @@ export const LoginPage: React.FC = () => {
           <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Sign in to access your financial dashboard</p>
         </div>
 
-        {/* Demo Quick Fill Button */}
+        {/* Demo Quick Fill & Instant Login Button */}
         <button
           type="button"
           onClick={fillDemoAccount}
-          className="w-full mb-5 py-2.5 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center justify-center space-x-2 hover:bg-emerald-100 transition-colors"
+          disabled={isSubmitting}
+          className="w-full mb-5 py-3 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center justify-center space-x-2 hover:bg-emerald-100 transition-colors shadow-sm"
         >
           <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span>Quick Fill Demo Credentials (demo@example.com)</span>
+          <span>⚡ Instant One-Click Demo Login (demo@example.com)</span>
         </button>
 
         {error && (
