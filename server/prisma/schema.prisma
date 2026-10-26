@@ -1,3 +1,8 @@
+// ============================================================================
+// Smart Expense & Budget Tracker - Database Schema Specification
+// ORM: Prisma Client JS | Database Engine: SQLite / PostgreSQL
+// ============================================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,85 +12,101 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Core User entity representing registered account holders.
+/// Houses authentication credentials, profile metadata, and foreign key cascades.
 model User {
   id             String          @id @default(uuid())
   name           String
-  email          String          @unique
-  passwordHash   String
-  profileImage   String?
+  email          String          @unique /// Unique indexed email address for authentication
+  passwordHash   String          /// Salted BCrypt password hash (10 rounds)
+  profileImage   String?         /// Optional avatar URL or identifier
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  transactions   Transaction[]
-  budgets        Budget[]
-  savingsGoals   SavingsGoal[]
-  notifications  Notification[]
-  settings       UserSettings?
+  // Relational associations with cascading deletion for clean tenant cleanup
+  transactions   Transaction[]   /// All income and expense records belonging to this user
+  budgets        Budget[]        /// Monthly category spending envelopes
+  savingsGoals   SavingsGoal[]   /// User financial savings milestone targets
+  notifications  Notification[]  /// In-app notification messages
+  settings       UserSettings?   /// 1-to-1 configurable preferences (currency, theme, alerts)
 }
 
+/// Ledger entries for monetary inflows and outflows.
+/// Linked directly to parent User for tenant isolation.
 model Transaction {
   id              String   @id @default(uuid())
-  userId          String
+  userId          String   /// Foreign Key referencing User.id
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type            String   // "INCOME" | "EXPENSE"
-  amount          Float
-  category        String   // Food, Travel, Shopping, Education, Bills, Entertainment, Healthcare, Rent, Subscriptions, Salary, Freelance, Business, Allowance, Investment, Other
-  description     String
-  paymentMethod   String   // Cash, UPI, Debit Card, Credit Card, Bank Transfer, Other
-  transactionDate DateTime
-  notes           String?
-  receiptUrl      String?
+  type            String   /// Transaction category classification: "INCOME" or "EXPENSE"
+  amount          Float    /// Monetary value (strictly positive float)
+  category        String   /// Category envelope (e.g. Food, Travel, Shopping, Salary, Bills)
+  description     String   /// Brief user description / merchant title
+  paymentMethod   String   /// Transaction mode: Cash, UPI, Debit Card, Credit Card, Bank Transfer
+  transactionDate DateTime /// Historical or current timestamp of transaction
+  notes           String?  /// Optional supplemental notes / context
+  receiptUrl      String?  /// Optional path to receipt voucher image
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([userId, transactionDate]) /// High-performance index for range queries and dashboard summaries
 }
 
+/// Monthly financial spending budget targets allocated per category envelope.
+/// Used by the dynamic alert engine to detect 80% warning and 100% overflow states.
 model Budget {
   id        String   @id @default(uuid())
-  userId    String
+  userId    String   /// Foreign Key referencing User.id
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category  String
-  amount    Float
-  month     Int      // 1-12
-  year      Int      // e.g. 2026
+  category  String   /// Target category name (e.g., Food & Dining)
+  amount    Float    /// Maximum target allocation limit for the specified month
+  month     Int      /// Month integer (1 = January, 12 = December)
+  year      Int      /// Gregorian calendar year (e.g. 2026)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// Ensures a user cannot configure duplicate budgets for the same category in the same month
   @@unique([userId, category, month, year])
 }
 
+/// Financial target milestones empowering users to save for specific future events.
 model SavingsGoal {
   id            String   @id @default(uuid())
-  userId        String
+  userId        String   /// Foreign Key referencing User.id
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String
-  targetAmount  Float
-  currentAmount Float    @default(0)
-  targetDate    DateTime
-  description   String?
-  status        String   @default("IN_PROGRESS") // "IN_PROGRESS" | "COMPLETED"
+  name          String   /// Goal title (e.g. "Emergency Fund", "New Laptop")
+  targetAmount  Float    /// Total savings target goal
+  currentAmount Float    @default(0) /// Accumulated savings deposits
+  targetDate    DateTime /// Desired completion deadline
+  description   String?  /// Rationale or goal description
+  status        String   @default("IN_PROGRESS") /// Lifecycle state: "IN_PROGRESS" | "COMPLETED"
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
 
+/// System and trigger-based in-app notifications.
+/// Generated on budget threshold breaches (80% / 100%) and savings goal completions.
 model Notification {
   id        String   @id @default(uuid())
-  userId    String
+  userId    String   /// Foreign Key referencing User.id
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   // "BUDGET_WARNING" | "BUDGET_EXCEEDED" | "GOAL_ACHIEVED" | "INFO"
-  message   String
-  isRead    Boolean  @default(false)
+  type      String   /// Classification: "BUDGET_WARNING" | "BUDGET_EXCEEDED" | "GOAL_ACHIEVED" | "INFO"
+  message   String   /// Descriptive human-readable notification text
+  isRead    Boolean  @default(false) /// Unread tracking badge indicator
   createdAt DateTime @default(now())
+
+  @@index([userId, isRead]) /// Index for efficient unread count badge queries
 }
 
+/// 1-to-1 User configuration preferences for personalization and UX settings.
 model UserSettings {
   id                      String   @id @default(uuid())
-  userId                  String   @unique
+  userId                  String   @unique /// Foreign Key referencing User.id (Strict 1-to-1)
   user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  currency                String   @default("INR")
-  darkMode                Boolean  @default(false)
-  notificationsEnabled    Boolean  @default(true)
-  budgetAlertsEnabled     Boolean  @default(true)
-  monthlyReportsEnabled   Boolean  @default(true)
+  currency                String   @default("INR") /// Currency symbol code ("INR", "USD", "EUR", "GBP")
+  darkMode                Boolean  @default(false) /// UI dark theme preference toggle
+  notificationsEnabled    Boolean  @default(true)  /// Master notification switch
+  budgetAlertsEnabled     Boolean  @default(true)  /// Toggle for 80% and 100% threshold alerts
+  monthlyReportsEnabled   Boolean  @default(true)  /// Toggle for end-of-month financial summaries
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 }

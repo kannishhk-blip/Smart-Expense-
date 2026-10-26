@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { CurrencyProvider } from './context/CurrencyContext';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 import { AppLayout } from './layouts/AppLayout';
 import { LandingPage } from './pages/LandingPage';
@@ -117,7 +118,9 @@ export const App: React.FC = () => {
       <ThemeProvider>
         <AuthProvider>
           <CurrencyProvider>
-            <AppContent />
+            <ErrorBoundary>
+              <AppContent />
+            </ErrorBoundary>
           </CurrencyProvider>
         </AuthProvider>
       </ThemeProvider>
