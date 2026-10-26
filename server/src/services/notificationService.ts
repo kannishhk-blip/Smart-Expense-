@@ -1,4 +1,5 @@
 import { prisma } from '../config/db';
+import { evaluateBudgetStatus } from '../utils/calculations';
 
 export const checkAndTriggerBudgetAlerts = async (userId: string, category: string, date: Date) => {
   try {
@@ -31,30 +32,24 @@ export const checkAndTriggerBudgetAlerts = async (userId: string, category: stri
     });
 
     const totalSpent = expenseAgg._sum.amount || 0;
-    const pctUsed = Math.round((totalSpent / budget.amount) * 100);
+    const evaluation = evaluateBudgetStatus(budget.amount, totalSpent, category);
 
-    if (totalSpent > budget.amount) {
-      const overspent = Math.round(totalSpent - budget.amount);
-      const msg = `You have exceeded your ${category} budget by ₹${overspent.toLocaleString('en-IN')}.`;
-      
-      // Avoid spamming identical notifications
+    if (evaluation.status === 'EXCEEDED' && evaluation.message) {
       const existing = await prisma.notification.findFirst({
-        where: { userId, type: 'BUDGET_EXCEEDED', message: msg, isRead: false },
+        where: { userId, type: 'BUDGET_EXCEEDED', message: evaluation.message, isRead: false },
       });
       if (!existing) {
         await prisma.notification.create({
-          data: { userId, type: 'BUDGET_EXCEEDED', message: msg },
+          data: { userId, type: 'BUDGET_EXCEEDED', message: evaluation.message },
         });
       }
-    } else if (pctUsed >= 80) {
-      const msg = `You have used ${pctUsed}% of your ${category} budget.`;
-      
+    } else if (evaluation.status === 'WARNING' && evaluation.message) {
       const existing = await prisma.notification.findFirst({
-        where: { userId, type: 'BUDGET_WARNING', message: msg, isRead: false },
+        where: { userId, type: 'BUDGET_WARNING', message: evaluation.message, isRead: false },
       });
       if (!existing) {
         await prisma.notification.create({
-          data: { userId, type: 'BUDGET_WARNING', message: msg },
+          data: { userId, type: 'BUDGET_WARNING', message: evaluation.message },
         });
       }
     }

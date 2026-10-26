@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
+    "test": "ts-node src/tests/runAllTests.ts",
     "prisma:generate": "prisma generate",
     "prisma:db-push": "prisma db push",
     "prisma:seed": "ts-node prisma/seed.ts"

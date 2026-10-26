@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   X,
+  MessageSquareHeart,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { label: 'Savings Goals', path: '/savings', icon: PiggyBank },
     { label: 'Insights & Trends', path: '/insights', icon: TrendingUp },
     { label: 'Monthly Reports', path: '/reports', icon: FileBarChart },
+    { label: 'User Feedback', path: '/feedback', icon: MessageSquareHeart },
     { label: 'Profile', path: '/profile', icon: User },
     { label: 'Settings', path: '/settings', icon: Settings },
   ];
